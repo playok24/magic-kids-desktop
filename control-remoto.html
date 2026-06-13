@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Remoto TV</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+    background:#111;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    font-family:"Bahnschrift",Arial,sans-serif;
+}
+
+.remote{
+    width:320px;
+    padding:30px 20px 25px;
+    background:linear-gradient(160deg,#2a2a2a,#1a1a1a);
+    border:2px solid #444;
+    border-radius:30px 30px 36px 36px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.06);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.remote .led{
+    width:50px;
+    height:8px;
+    background:linear-gradient(90deg,#0a0,#080);
+    border-radius:4px;
+    margin:0 auto 8px;
+    box-shadow:0 0 12px #0f0;
+}
+
+.remote .brand{
+    text-align:center;
+    color:#555;
+    font-size:11px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    margin-bottom:4px;
+}
+
+.row{
+    display:flex;
+    gap:10px;
+}
+
+.row.three button{
+    flex:1;
+}
+
+.row.two button{
+    flex:1;
+}
+
+.remote button{
+    height:52px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:bold;
+    color:#eee;
+    background:linear-gradient(180deg,#3a3a3a,#222);
+    box-shadow:0 4px 0 #111,inset 0 1px 0 rgba(255,255,255,0.1);
+    transition:all .08s;
+    font-family:"Bahnschrift",Arial,sans-serif;
+}
+
+.remote button:active{
+    transform:translateY(3px);
+    box-shadow:0 1px 0 #111;
+}
+
+.remote button:hover{
+    background:linear-gradient(180deg,#4a4a4a,#2a2a2a);
+}
+
+.remote .btn-play{
+    background:linear-gradient(180deg,#2a6a2a,#1a4a1a);
+}
+.remote .btn-play:hover{
+    background:linear-gradient(180deg,#3a7a3a,#2a5a2a);
+}
+
+.remote .btn-pause{
+    background:linear-gradient(180deg,#6a6a2a,#4a4a1a);
+}
+.remote .btn-pause:hover{
+    background:linear-gradient(180deg,#7a7a3a,#5a5a2a);
+}
+
+.remote .btn-full{
+    background:linear-gradient(180deg,#2a4a6a,#1a2a4a);
+}
+.remote .btn-full:hover{
+    background:linear-gradient(180deg,#3a5a7a,#2a3a5a);
+}
+
+.remote .btn-exit{
+    background:linear-gradient(180deg,#6a2a2a,#4a1a1a);
+}
+.remote .btn-exit:hover{
+    background:linear-gradient(180deg,#7a3a3a,#5a2a2a);
+}
+
+.remote .btn-prog{
+    background:linear-gradient(180deg,#4a2a6a,#2a1a4a);
+}
+.remote .btn-prog:hover{
+    background:linear-gradient(180deg,#5a3a7a,#3a2a5a);
+}
+
+.status{
+    text-align:center;
+    color:#666;
+    font-size:12px;
+    margin-top:4px;
+}
+
+.status.connected{
+    color:#0a0;
+}
+</style>
+</head>
+<body>
+
+<div class="remote">
+    <div class="led"></div>
+    <div class="brand">TV Retro</div>
+
+    <div class="row two">
+        <button class="btn-play" id="play">▶ PLAY</button>
+        <button class="btn-pause" id="pause">⏸ PAUSE</button>
+    </div>
+    <div class="row two">
+        <button id="volup">🔊 +</button>
+        <button id="voldown">🔉 -</button>
+    </div>
+    <div class="row two">
+        <button id="chup">CH ▲</button>
+        <button id="chdn">CH ▼</button>
+    </div>
+    <div class="row two">
+        <button class="btn-prog" id="prog">📋 PROG</button>
+        <button class="btn-full" id="full">⛶ FULL</button>
+    </div>
+
+    <div class="status" id="status">Buscando reproductor...</div>
+</div>
+
+<script>
+const channel = new BroadcastChannel("tv-retro-control");
+const statusEl = document.getElementById("status");
+
+function send(cmd, value){
+    channel.postMessage({cmd, value});
+}
+
+function cmd(btn, action, val){
+    document.getElementById(btn).onclick=()=>{
+        send(action, val);
+    };
+}
+
+cmd("play","play");
+cmd("pause","pause");
+cmd("volup","volume", Math.min(1, 0.5));
+cmd("voldown","volume", Math.max(0, 0.3));
+cmd("chup","ch","up");
+cmd("chdn","ch","down");
+cmd("prog","prog");
+cmd("full","full");
+
+// Fix volume buttons to send relative adjustment
+document.getElementById("volup").onclick=()=>{
+    send("voladj", 0.1);
+};
+document.getElementById("voldown").onclick=()=>{
+    send("voladj", -0.1);
+};
+
+// keep-alive ping
+setInterval(()=>{
+    send("ping");
+}, 3000);
+
+channel.onmessage = (e)=>{
+    if(e.data.cmd === "pong"){
+        statusEl.textContent = "✓ Conectado";
+        statusEl.className = "status connected";
+    }
+};
+</script>
+</body>
+</html>

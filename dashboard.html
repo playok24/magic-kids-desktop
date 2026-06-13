@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magic Kids - Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+    background:#0a0a1a;
+    color:#fff;
+    font-family:"Bahnschrift",Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.dashboard{
+    text-align:center;
+    padding:60px;
+}
+
+.dashboard h1{
+    font-size:28px;
+    color:#00ccff;
+    margin-bottom:10px;
+    text-shadow:0 0 20px rgba(0,204,255,0.3);
+}
+
+.dashboard .sub{
+    color:#666;
+    font-size:14px;
+    margin-bottom:50px;
+}
+
+.counter-box{
+    display:inline-block;
+    background:linear-gradient(145deg,#111122,#0a0a1a);
+    border:1px solid #1a1a3a;
+    border-radius:24px;
+    padding:50px 80px;
+    box-shadow:0 0 60px rgba(0,204,255,0.1);
+}
+
+.counter-box .number{
+    font-size:96px;
+    font-weight:bold;
+    color:#00ff88;
+    text-shadow:0 0 40px rgba(0,255,136,0.3);
+    line-height:1;
+}
+
+.counter-box .label{
+    font-size:18px;
+    color:#888;
+    margin-top:10px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+}
+
+.counter-box .pulse{
+    display:inline-block;
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:#00ff88;
+    margin-right:8px;
+    animation:pulse 1.5s infinite;
+    vertical-align:middle;
+}
+
+@keyframes pulse{
+    0%{opacity:1;transform:scale(1)}
+    50%{opacity:0.4;transform:scale(0.8)}
+    100%{opacity:1;transform:scale(1)}
+}
+
+.status{
+    margin-top:20px;
+    color:#555;
+    font-size:13px;
+}
+
+.status .dot{
+    display:inline-block;
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:#0a0;
+    margin-right:6px;
+    vertical-align:middle;
+}
+
+.history{
+    margin-top:40px;
+    display:flex;
+    gap:30px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.history-item{
+    background:rgba(255,255,255,0.03);
+    border-radius:12px;
+    padding:20px 30px;
+    min-width:120px;
+}
+
+.history-item .val{
+    font-size:32px;
+    font-weight:bold;
+    color:#88ccff;
+}
+
+.history-item .lbl{
+    font-size:12px;
+    color:#666;
+    margin-top:4px;
+}
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h1>📺 Magic Kids Desktop</h1>
+    <div class="sub">Espectadores en vivo</div>
+
+    <div class="counter-box">
+        <div class="number" id="ws-count">0</div>
+        <div class="label"><span class="pulse"></span>EN VIVO AHORA</div>
+    </div>
+
+    <div class="status">
+        <span class="dot"></span>
+        <span id="ws-status">Conectando...</span>
+    </div>
+
+    <div class="history" style="margin-top:30px;">
+        <div class="history-item">
+            <div class="val" id="total-count">--</div>
+            <div class="lbl">APERTURAS TOTALES</div>
+        </div>
+        <div class="history-item">
+            <div class="val" id="today-count">--</div>
+            <div class="lbl">HOY</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const WS_URL = "wss://magic-kids-ws.onrender.com";
+const COUNTER_API = "https://api.counterapi.dev/v1/magic-kids-desktop";
+const wsCountEl = document.getElementById("ws-count");
+const wsStatusEl = document.getElementById("ws-status");
+const totalCountEl = document.getElementById("total-count");
+const todayEl = document.getElementById("today-count");
+
+function connectWS(){
+    const ws = new WebSocket(WS_URL);
+    ws.onopen = () => { wsStatusEl.textContent = "Conectado"; };
+    ws.onmessage = (e) => {
+        try {
+            const d = JSON.parse(e.data);
+            if(d.type === "presence" && d.count !== undefined){
+                wsCountEl.textContent = d.count;
+            }
+        } catch(_){}
+    };
+    ws.onclose = () => {
+        wsStatusEl.textContent = "Desconectado. Reconectando...";
+        setTimeout(connectWS, 5000);
+    };
+    ws.onerror = () => {};
+}
+connectWS();
+
+function update(){
+    fetch(COUNTER_API + "/visitors")
+        .then(r => r.json())
+        .then(d => {
+            if(d.count !== undefined) totalCountEl.textContent = d.count;
+        })
+        .catch(()=>{});
+    const today = new Date().toISOString().slice(0,10);
+    fetch(COUNTER_API + "/" + today)
+        .then(r => r.json())
+        .then(d => {
+            if(d.count !== undefined) todayEl.textContent = d.count;
+        })
+        .catch(()=>{});
+}
+update();
+setInterval(update, 10000);
+</script>
+</body>
+</html>

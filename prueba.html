@@ -1,0 +1,793 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magic Kids Television v1.0.0</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<style>
+*{margin:0;padding:0}
+body{
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:1365px;
+    height:768px;
+    overflow:hidden;
+    font-family:"Bahnschrift",Arial,sans-serif;
+}
+
+#container{
+    position:relative;
+    width:1365px;
+    height:768px;
+    background:url("tv-retro.jpg") center center no-repeat;
+    background-size:cover;
+    flex-shrink:0;
+}
+
+#container.full-mode{
+    background:none;
+    width:100vw;
+    height:100vh;
+}
+
+body.full-mode-body{
+    width:100vw;
+    height:100vh;
+}
+
+#screen{
+    position:absolute;
+    left:557px;
+    top:89px;
+    width:297px;
+    height:209px;
+    overflow:hidden;
+    background:#000;
+    border-radius:8px;
+}
+
+#container.full-mode #screen{
+    left:0;
+    top:0;
+    width:100vw;
+    height:100vh;
+    border-radius:0;
+}
+
+#video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:none;
+}
+
+#loading{
+    position:absolute;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:#00ff66;
+    font-size:24px;
+    font-weight:bold;
+    background:#000;
+    z-index:3;
+    text-shadow:0 0 10px #00ff66;
+}
+
+#static{
+    position:absolute;
+    inset:0;
+    display:none;
+    z-index:2;
+    background:
+      repeating-radial-gradient(
+          circle,
+          #fff 0px,
+          #999 1px,
+          #111 2px,
+          #000 3px
+      );
+    animation:noise .08s infinite;
+}
+
+@keyframes noise{
+    0% { transform:translate(0,0);}
+    25% { transform:translate(-2px,1px);}
+    50% { transform:translate(2px,-1px);}
+    75% { transform:translate(-1px,2px);}
+    100% { transform:translate(1px,-2px);}
+}
+
+#remote{
+    position:absolute;
+    left:930px;
+    top:420px;
+    width:175px;
+    padding:16px 12px 18px;
+    background:linear-gradient(145deg,#2a2a2a,#1a1a1a);
+    border:2px solid #444;
+    border-radius:18px 18px 22px 22px;
+    box-shadow:
+        0 6px 20px rgba(0,0,0,0.7),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    z-index:5;
+    transition:none;
+}
+
+#remote::before{
+    content:"";
+    display:block;
+    width:40px;
+    height:6px;
+    background:linear-gradient(90deg,#555,#333);
+    border-radius:4px;
+    margin:0 auto 6px;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,0.5);
+}
+
+#remote .row{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+}
+
+#remote button{
+    flex:1;
+    height:42px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:bold;
+    color:#eee;
+    background:linear-gradient(180deg,#3a3a3a,#222);
+    box-shadow:
+        0 3px 0 #111,
+        inset 0 1px 0 rgba(255,255,255,0.1);
+    transition:all .08s;
+    text-shadow:0 1px 2px rgba(0,0,0,0.5);
+    font-family:"Bahnschrift",Arial,sans-serif;
+}
+
+#remote button:active{
+    transform:translateY(2px);
+    box-shadow:0 1px 0 #111;
+}
+
+#remote button:hover{
+    background:linear-gradient(180deg,#4a4a4a,#2a2a2a);
+}
+
+#remote #full{
+    background:linear-gradient(180deg,#2a6a2a,#1a4a1a);
+}
+#remote #full:active{
+    transform:translateY(2px);
+}
+#remote #full:hover{
+    background:linear-gradient(180deg,#3a7a3a,#2a5a2a);
+}
+#remote #full.exit{
+    background:linear-gradient(180deg,#6a2a2a,#4a1a1a);
+}
+#remote #full.exit:hover{
+    background:linear-gradient(180deg,#7a3a3a,#5a2a2a);
+}
+
+#remote #prog{
+    background:linear-gradient(180deg,#2a4a6a,#1a2a4a);
+}
+#remote #prog:hover{
+    background:linear-gradient(180deg,#3a5a7a,#2a3a5a);
+}
+
+#container.full-mode #remote{
+    display:none;
+}
+
+/* volume indicator */
+#vol-indicator{
+    position:absolute;
+    bottom:5px;
+    right:5px;
+    color:#00ff66;
+    font-size:12px;
+    font-weight:bold;
+    text-shadow:0 0 6px #00ff66;
+    z-index:5;
+    display:none;
+    background:rgba(0,0,0,0.6);
+    padding:2px 6px;
+    border-radius:4px;
+}
+
+/* --- PROGRAMACION OVERLAY --- */
+#prog-overlay{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:500px;
+    max-height:560px;
+    background:rgba(0,10,30,0.92);
+    border:2px solid #00aaff;
+    border-radius:16px;
+    padding:20px;
+    z-index:20;
+    display:none;
+    color:#fff;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 40px rgba(0,170,255,0.3);
+}
+
+#prog-overlay.visible{
+    display:block;
+}
+
+#prog-overlay h2{
+    margin:0 0 12px;
+    text-align:center;
+    color:#00ccff;
+    font-size:22px;
+    text-shadow:0 0 12px #00ccff;
+}
+
+#prog-overlay .close-btn{
+    position:absolute;
+    top:12px;
+    right:16px;
+    background:none;
+    border:none;
+    color:#fff;
+    font-size:24px;
+    cursor:pointer;
+}
+
+#prog-overlay .close-btn:hover{
+    color:#ff4444;
+}
+
+#prog-list{
+    max-height:460px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+#prog-list::-webkit-scrollbar{
+    width:6px;
+}
+#prog-list::-webkit-scrollbar-track{
+    background:rgba(255,255,255,0.05);
+    border-radius:3px;
+}
+#prog-list::-webkit-scrollbar-thumb{
+    background:#00aaff;
+    border-radius:3px;
+}
+
+.prog-item{
+    display:flex;
+    padding:6px 10px;
+    border-radius:6px;
+    background:rgba(255,255,255,0.03);
+    transition:background .2s;
+}
+.prog-item:hover{
+    background:rgba(255,255,255,0.08);
+}
+.prog-item .hora{
+    width:50px;
+    color:#88ccff;
+    font-weight:bold;
+    flex-shrink:0;
+}
+.prog-item .nombre{
+    flex:1;
+}
+.prog-item.current{
+    background:rgba(0,170,255,0.2);
+    border-left:3px solid #00ccff;
+}
+.prog-item.current .nombre{
+    color:#00ff88;
+    font-weight:bold;
+}
+
+#prog-overlay .now-bar{
+    text-align:center;
+    margin-bottom:10px;
+    padding:8px;
+    background:rgba(0,255,136,0.1);
+    border-radius:8px;
+    border:1px solid rgba(0,255,136,0.3);
+}
+
+#prog-overlay .now-bar .label{
+    font-size:12px;
+    color:#88ffbb;
+}
+#prog-overlay .now-bar .show{
+    font-size:20px;
+    font-weight:bold;
+    color:#00ff88;
+}
+
+/* overlay backdrop */
+#prog-backdrop{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    z-index:19;
+    display:none;
+}
+#prog-backdrop.visible{
+    display:block;
+}
+
+#view-counter{
+    position:absolute;
+    bottom:2px;
+    left:4px;
+    color:rgba(255,255,255,0.25);
+    font-size:10px;
+    z-index:4;
+    pointer-events:none;
+}
+
+/* Login */
+#login-overlay{
+    position:fixed;
+    inset:0;
+    background:linear-gradient(135deg,#1a0a2e,#2d1b4e,#1a0a2e);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    z-index:100;
+}
+#login-overlay.active{
+    display:flex;
+}
+#login-box{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(180,120,255,0.4);
+    border-radius:12px;
+    padding:30px 48px;
+    text-align:center;
+}
+#login-box input{
+    display:block;
+    width:220px;
+    padding:10px 14px;
+    margin:0 auto 16px;
+    border:1px solid rgba(180,120,255,0.4);
+    border-radius:6px;
+    background:rgba(0,0,0,0.4);
+    color:#e0d0ff;
+    font-size:16px;
+    text-align:center;
+    outline:none;
+}
+#login-box input:focus{
+    border-color:rgba(180,120,255,0.8);
+}
+#login-box button{
+    padding:10px 32px;
+    border:none;
+    border-radius:6px;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    color:#fff;
+    font-size:16px;
+    cursor:pointer;
+    font-weight:bold;
+}
+#login-box button:hover{
+    background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+}
+
+/* Header */
+#header-bar{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    padding:0;
+    z-index:10;
+    pointer-events:none;
+}
+#header-top{
+    display:flex;
+    flex-direction:column;
+    padding:12px 0 0 30px;
+}
+#greeting{
+    color:rgba(255,255,255,0.4);
+    font-size:13px;
+    font-weight:bold;
+}
+#container.full-mode #header-bar{
+    display:none;
+}
+</style>
+</head>
+<body>
+
+<div id="login-overlay">
+    <div id="login-box">
+        <input type="text" id="login-name" placeholder="Ingresa tu nombre" maxlength="20" autocomplete="off">
+        <button id="login-btn">ENTRAR</button>
+    </div>
+</div>
+
+<div id="container">
+
+    <div id="header-bar">
+        <div id="header-top">
+            <span id="greeting"></span>
+        </div>
+        <button id="update-btn" style="display:none;position:absolute;bottom:-40px;left:0;padding:4px 12px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">ACTUALIZAR</button>
+    </div>
+
+    <div id="screen">
+
+        <div id="loading">SINTONIZANDO...</div>
+        <div id="static"></div>
+        <div id="vol-indicator"></div>
+        <div id="view-counter">&#x1F441; <span id="view-count">0</span></div>
+
+        <video id="video" autoplay muted playsinline></video>
+
+    </div>
+
+    <div id="remote">
+        <div class="row">
+            <button id="play">▶ PLAY</button>
+            <button id="pause">⏸ PAUSE</button>
+        </div>
+        <div class="row">
+            <button id="volup">🔊 +</button>
+            <button id="voldown">🔉 -</button>
+        </div>
+        <div class="row">
+            <button id="chup">CH ▲</button>
+            <button id="chdn">CH ▼</button>
+        </div>
+        <div class="row">
+            <button id="prog">📋 PROG</button>
+            <button id="full">⛶ FULL</button>
+        </div>
+    </div>
+
+    <div id="prog-backdrop"></div>
+
+    <div id="prog-overlay">
+        <button class="close-btn" id="prog-close">✕</button>
+        <h2>📺 PROGRAMACIÓN</h2>
+        <div class="now-bar">
+            <div class="label">AHORA</div>
+            <div class="show" id="now-show">---</div>
+        </div>
+        <div id="prog-list"></div>
+    </div>
+
+</div>
+
+<script>
+const STREAM = "https://183.bozztv.com/giatv/giatv-magicplus/magicplus/chunks.m3u8";
+
+const video = document.getElementById("video");
+const loading = document.getElementById("loading");
+const staticScreen = document.getElementById("static");
+const container = document.getElementById("container");
+const fullBtn = document.getElementById("full");
+const volInd = document.getElementById("vol-indicator");
+
+let isFullMode = false;
+
+let programacion = [];
+const PROG_JSON_URL = "https://playok24.github.io/magic-kids-tv/programacion.json";
+fetch(PROG_JSON_URL).then(r=>r.json()).then(d=>{programacion=d}).catch(()=>{});
+
+function toMin(h){
+    const [hh,mm]=h.split(':').map(Number);
+    return hh*60+mm;
+}
+
+function getNow(){
+    const ahora=new Date();
+    const minActual=ahora.getHours()*60+ahora.getMinutes();
+    for(let i=0;i<programacion.length;i++){
+        const actual=toMin(programacion[i].hora);
+        const sig=i+1<programacion.length?toMin(programacion[i+1].hora):1440;
+        if(minActual>=actual&&minActual<sig){
+            return{i,programa:programacion[i].programa};
+        }
+    }
+    return{i:-1,programa:'---'};
+}
+
+function showVideo(){
+    loading.style.display="none";
+    staticScreen.style.display="none";
+    video.style.display="block";
+}
+
+function showStatic(){
+    loading.style.display="none";
+    video.style.display="none";
+    staticScreen.style.display="block";
+}
+
+if(Hls.isSupported()){
+    const hls = new Hls();
+    hls.loadSource(STREAM);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED,function(){
+        video.volume=0.4;
+        video.play();
+    });
+    video.addEventListener("playing",showVideo);
+    hls.on(Hls.Events.ERROR,function(event,data){
+        if(data.fatal){
+            showStatic();
+        }
+    });
+}
+else if(video.canPlayType('application/vnd.apple.mpegurl')){
+    video.src = STREAM;
+    video.addEventListener("loadedmetadata",function(){
+        video.play();
+    });
+}
+
+video.addEventListener("error",showStatic);
+
+document.getElementById("play").onclick=()=>{
+    video.muted=false;
+    video.play();
+};
+
+document.getElementById("pause").onclick=()=>{
+    video.pause();
+};
+
+function showVol(){
+    const pct=Math.round(video.volume*100);
+    volInd.textContent="VOL "+pct+"%";
+    volInd.style.display="block";
+    clearTimeout(volInd._hide);
+    volInd._hide=setTimeout(()=>{volInd.style.display="none";},1500);
+}
+
+document.getElementById("volup").onclick=()=>{
+    video.muted=false;
+    video.volume=Math.min(1,video.volume+0.1);
+    showVol();
+};
+
+document.getElementById("voldown").onclick=()=>{
+    video.muted=false;
+    video.volume=Math.max(0,video.volume-0.1);
+    showVol();
+};
+
+function enterFull(){
+    isFullMode=true;
+    container.classList.add("full-mode");
+    document.body.classList.add("full-mode-body");
+    fullBtn.textContent="✕ SALIR";
+    fullBtn.classList.add("exit");
+    if(window.electronAPI){
+        window.electronAPI.fullscreenEnter();
+    }else if(video.requestFullscreen){
+        video.requestFullscreen().catch(()=>{});
+    }
+}
+
+function exitFull(){
+    isFullMode=false;
+    container.classList.remove("full-mode");
+    document.body.classList.remove("full-mode-body");
+    fullBtn.textContent="⛶ FULL";
+    fullBtn.classList.remove("exit");
+    if(window.electronAPI){
+        window.electronAPI.fullscreenExit();
+    }else if(document.fullscreenElement){
+        document.exitFullscreen().catch(()=>{});
+    }
+}
+
+fullBtn.onclick=()=>{
+    if(isFullMode){
+        exitFull();
+    }else{
+        enterFull();
+    }
+};
+
+document.addEventListener("keydown",(e)=>{
+    if(e.key==="f"||e.key==="F") fullBtn.click();
+    if(e.key==="Escape"){
+        if(isFullMode){
+            exitFull();
+        }else{
+            document.getElementById("prog-close").click();
+        }
+    }
+});
+
+// detect native fullscreen exit (browser)
+document.addEventListener("fullscreenchange",()=>{
+    if(!document.fullscreenElement&&isFullMode){
+        exitFull();
+    }
+});
+
+// --- PROGRAMACION OVERLAY ---
+const progBtn=document.getElementById("prog");
+const overlay=document.getElementById("prog-overlay");
+const backdrop=document.getElementById("prog-backdrop");
+const progList=document.getElementById("prog-list");
+const nowShow=document.getElementById("now-show");
+
+function buildProgramacion(){
+    const nowIdx=getNow().i;
+    nowShow.textContent=getNow().programa;
+    progList.innerHTML="";
+    programacion.forEach((p,i)=>{
+        const div=document.createElement("div");
+        div.className="prog-item"+(i===nowIdx?" current":"");
+        div.innerHTML=`<span class="hora">${p.hora}</span><span class="nombre">${p.programa}</span>`;
+        progList.appendChild(div);
+    });
+    if(nowIdx>=0){
+        const el=progList.children[nowIdx];
+        if(el) el.scrollIntoView({block:"center"});
+    }
+}
+
+function openProg(){
+    buildProgramacion();
+    overlay.classList.add("visible");
+    backdrop.classList.add("visible");
+}
+
+function closeProg(){
+    overlay.classList.remove("visible");
+    backdrop.classList.remove("visible");
+}
+
+document.getElementById("chup").onclick=()=>{
+    // placeholder: cambiar canal arriba
+};
+document.getElementById("chdn").onclick=()=>{
+    // placeholder: cambiar canal abajo
+};
+
+progBtn.onclick=openProg;
+document.getElementById("prog-close").onclick=closeProg;
+backdrop.onclick=closeProg;
+
+// refresh "now" every 30s
+setInterval(()=>{
+    if(overlay.classList.contains("visible")){
+        nowShow.textContent=getNow().programa;
+    }
+},30000);
+
+// --- CONTROL REMOTO (BroadcastChannel) ---
+const ctrlChannel = new BroadcastChannel("tv-retro-control");
+ctrlChannel.onmessage = (e)=>{
+    const {cmd, value} = e.data;
+    switch(cmd){
+        case "play": document.getElementById("play").click(); break;
+        case "pause": document.getElementById("pause").click(); break;
+        case "voladj":
+            video.muted=false;
+            video.volume=Math.max(0,Math.min(1,video.volume+value));
+            showVol();
+            break;
+        case "volume": video.volume=value; break;
+        case "ch":
+        case "chup": document.getElementById("chup").click(); break;
+        case "chdn": document.getElementById("chdn").click(); break;
+        case "prog":
+            if(overlay.classList.contains("visible")) closeProg();
+            else openProg();
+            break;
+        case "full": fullBtn.click(); break;
+        case "ping": ctrlChannel.postMessage({cmd:"pong"}); break;
+    }
+};
+
+// --- CONTADOR EN VIVO (WebSocket) ---
+const WS_URL = "wss://magic-kids-ws.onrender.com";
+let wsCount = 0;
+let wsConnected = false;
+
+const viewCountEl = document.getElementById("view-count");
+
+function connectWS(){
+    const ws = new WebSocket(WS_URL);
+    ws.onopen = () => { wsConnected = true; };
+    ws.onmessage = (e) => {
+        try {
+            const d = JSON.parse(e.data);
+            if(d.type === "presence" && d.count !== undefined){
+                wsCount = d.count;
+                if(viewCountEl) viewCountEl.textContent = wsCount;
+            }
+        } catch(_){}
+    };
+    ws.onclose = () => {
+        wsConnected = false;
+        setTimeout(connectWS, 5000);
+    };
+    ws.onerror = () => {};
+}
+connectWS();
+
+// --- CONTADOR DIARIO (fondo) ---
+const COUNTER_API = "https://api.counterapi.dev/v1/magic-kids-desktop";
+const today = new Date().toISOString().slice(0,10);
+(function(){
+    if(window.electronAPI){
+        window.electronAPI.counterFetch(COUNTER_API + "/" + today + "/up").catch(()=>{});
+    } else {
+        fetch(COUNTER_API + "/" + today + "/up").catch(()=>{});
+    }
+})();
+
+// --- LOGIN ---
+const loginOverlay = document.getElementById("login-overlay");
+const loginInput = document.getElementById("login-name");
+const loginBtn = document.getElementById("login-btn");
+const greetingEl = document.getElementById("greeting");
+
+const savedName = localStorage.getItem("mk-user");
+if(savedName){
+    greetingEl.textContent = "HOLA " + savedName.toUpperCase();
+} else {
+    loginOverlay.classList.add("active");
+    loginInput.focus();
+}
+
+loginBtn.onclick = () => {
+    const name = loginInput.value.trim();
+    if(!name) return;
+    localStorage.setItem("mk-user", name);
+    greetingEl.textContent = "HOLA " + name.toUpperCase();
+    loginOverlay.classList.remove("active");
+};
+
+loginInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter") loginBtn.click();
+});
+
+// --- AUTO-UPDATE (solo Electron) ---
+if(window.electronAPI){
+    const updateBtn = document.getElementById("update-btn");
+    window.electronAPI.onUpdateAvailable(()=>{
+        updateBtn.textContent = "DESCARGANDO...";
+        updateBtn.style.display = "block";
+    });
+    window.electronAPI.onUpdateProgress((pct)=>{
+        updateBtn.textContent = pct + "%";
+    });
+    window.electronAPI.onUpdateDownloaded(()=>{
+        updateBtn.textContent = "INSTALAR ACTUALIZACION";
+        updateBtn.style.display = "block";
+        updateBtn.onclick = () => window.electronAPI.installUpdate();
+    });
+}
+</script>
+</body>
+</html>
