@@ -466,23 +466,23 @@ body.full-mode-body{
 
     <div id="remote">
         <div class="row">
-            <button id="play">? PLAY</button>
-            <button id="pause">? PAUSE</button>
+            <button id="play">▶ PLAY</button>
+            <button id="pause">⏸ PAUSE</button>
         </div>
         <div class="row">
-            <button id="volup">?? +</button>
-            <button id="voldown">?? -</button>
+            <button id="volup">🔊 +</button>
+            <button id="voldown">🔉 -</button>
         </div>
         <div class="row">
-            <button id="chup">CH ?</button>
-            <button id="chdn">CH ?</button>
+            <button id="chup">CH ▲</button>
+            <button id="chdn">CH ▼</button>
         </div>
         <div class="row">
-            <button id="prog">?? PROG</button>
-            <button id="full">? FULL</button>
+            <button id="prog">📋 PROG</button>
+            <button id="full">⛶ FULL</button>
         </div>
         <div class="row" style="position:relative">
-            <button id="cast-btn" style="flex:1">?? CAST</button>
+            <button id="cast-btn" style="flex:1">📺 CAST</button>
             <google-cast-launcher id="cast-launcher" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1"></google-cast-launcher>
         </div>
     </div>
@@ -490,8 +490,8 @@ body.full-mode-body{
     <div id="prog-backdrop"></div>
 
     <div id="prog-overlay">
-        <button class="close-btn" id="prog-close">?</button>
-        <h2>?? PROGRAMACI�N</h2>
+        <button class="close-btn" id="prog-close">✕</button>
+        <h2>📺 PROGRAMACIÓN</h2>
         <div class="now-bar">
             <div class="label">AHORA</div>
             <div class="show" id="now-show">---</div>
@@ -604,7 +604,7 @@ function enterFull(){
     isFullMode=true;
     container.classList.add("full-mode");
     document.body.classList.add("full-mode-body");
-    fullBtn.textContent="? SALIR";
+    fullBtn.textContent="✕ SALIR";
     fullBtn.classList.add("exit");
     if(window.electronAPI){
         window.electronAPI.fullscreenEnter();
@@ -617,7 +617,7 @@ function exitFull(){
     isFullMode=false;
     container.classList.remove("full-mode");
     document.body.classList.remove("full-mode-body");
-    fullBtn.textContent="? FULL";
+    fullBtn.textContent="⛶ FULL";
     fullBtn.classList.remove("exit");
     if(window.electronAPI){
         window.electronAPI.fullscreenExit();
