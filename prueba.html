@@ -4,10 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Magic Kids Television v1.0.0</title>
-<script>
-window.__onGCastApiAvailable=function(a){window.__castLoaded=a};
-</script>
-<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
 *{margin:0;padding:0}
@@ -546,27 +542,38 @@ function showStatic(){
     staticScreen.style.display="block";
 }
 
-if(Hls.isSupported()){
-    const hls = new Hls();
-    hls.loadSource(STREAM);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED,function(){
+var hlsInstance=null;
+
+function initHLS(){
+    if(!Hls.isSupported()){
+        if(video.canPlayType('application/vnd.apple.mpegurl')){
+            video.src=STREAM;
+            video.addEventListener("loadedmetadata",function(){video.play()});
+        }
+        return;
+    }
+    hlsInstance=new Hls();
+    hlsInstance.loadSource(STREAM);
+    hlsInstance.attachMedia(video);
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED,function(){
         video.volume=0.4;
         video.play();
     });
     video.addEventListener("playing",showVideo);
-    hls.on(Hls.Events.ERROR,function(event,data){
-        if(data.fatal){
-            showStatic();
-        }
+    hlsInstance.on(Hls.Events.ERROR,function(event,data){
+        if(data.fatal){showStatic();hlsInstance=null}
     });
 }
-else if(video.canPlayType('application/vnd.apple.mpegurl')){
-    video.src = STREAM;
-    video.addEventListener("loadedmetadata",function(){
-        video.play();
-    });
+
+function destroyHLS(){
+    if(hlsInstance){
+        hlsInstance.detachMedia();
+        hlsInstance.destroy();
+        hlsInstance=null;
+    }
 }
+
+initHLS();
 
 video.addEventListener("error",showStatic);
 
@@ -703,79 +710,49 @@ setInterval(()=>{
     }
 },30000);
 
-// --- CAST (Google Chromecast) ---
+// --- CAST (Remote Playback API) ---
 const castBtn=document.getElementById('cast-btn');
 let isCasting=false;
-let castReady=false;
 
-if(window.__castLoaded){
+castBtn.onclick=async function(){
+    if(!video.remote||!video.remote.prompt){
+        alert('Cast no disponible en este navegador');
+        return;
+    }
+    if(isCasting){
+        try{video.remote.cancel()}catch(e){}
+        return;
+    }
     try{
-        const ctx=cast.framework.CastContext.getInstance();
-        ctx.setOptions({
-            receiverApplicationId:chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-            autoJoinPolicy:chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-        });
-        ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED,function(e){
-            switch(e.sessionState){
-                case cast.framework.SessionState.SESSION_STARTED:
-                case cast.framework.SessionState.SESSION_RESUMED:
-                    isCasting=true;
-                    castReady=true;
-                    castBtn.classList.add('casting');
-                    video.pause();
-                    loadCastMedia();
-                    break;
-                case cast.framework.SessionState.SESSION_ENDED:
-                    isCasting=false;
-                    castBtn.classList.remove('casting');
-                    video.play();
-                    break;
-            }
-        });
-        castReady=true;
-    }catch(e){}
-}
-
-castBtn.onclick=function(){
-    if(!castReady){alert('Cast no disponible en este navegador');return}
-    if(isCasting){
-        cast.framework.CastContext.getInstance().endCurrentSession(true);
-    }else{
-        cast.framework.CastContext.getInstance().requestSession().catch(function(){});
+        destroyHLS();
+        video.src=STREAM;
+        video.muted=false;
+        await video.remote.prompt();
+        isCasting=true;
+        castBtn.classList.add('casting');
+        loading.style.display="none";
+        staticScreen.style.display="none";
+        video.style.display="block";
+    }catch(e){
+        console.error('Cast error:',e);
+        video.removeAttribute('src');
+        video.load();
+        initHLS();
     }
 };
 
-function loadCastMedia(){
-    const session=cast.framework.CastContext.getInstance().getCurrentSession();
-    if(!session)return;
-    const info=new chrome.cast.media.MediaInfo(STREAM,'application/x-mpegURL');
-    info.metadata=new chrome.cast.media.GenericMediaMetadata();
-    const nowProg=getNow().programa;
-    info.metadata.title='Magic Kids'+(nowProg!=='---'?' - '+nowProg:' Television');
-    session.loadMedia(new chrome.cast.media.LoadRequest(info)).catch(function(e){
-        console.error('Cast loadMedia error:',e);
-    });
-}
+video.remote.addEventListener('connect',function(){
+    isCasting=true;
+    castBtn.classList.add('casting');
+});
 
-document.getElementById("play").onclick=function(){
-    if(isCasting){
-        var rp=new cast.framework.RemotePlayer();
-        var rpc=new cast.framework.RemotePlayerController(rp);
-        if(rp.isPaused)rpc.playOrPause();
-        return;
-    }
-    video.muted=false;
-    video.play();
-};
-document.getElementById("pause").onclick=function(){
-    if(isCasting){
-        var rp=new cast.framework.RemotePlayer();
-        var rpc=new cast.framework.RemotePlayerController(rp);
-        if(!rp.isPaused)rpc.playOrPause();
-        return;
-    }
-    video.pause();
-};
+video.remote.addEventListener('disconnect',function(){
+    isCasting=false;
+    castBtn.classList.remove('casting');
+    video.removeAttribute('src');
+    video.load();
+    initHLS();
+});
 
 // --- CONTROL REMOTO (BroadcastChannel) ---
 const ctrlChannel = new BroadcastChannel("tv-retro-control");
