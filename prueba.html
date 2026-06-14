@@ -61,7 +61,11 @@ body.full-mode-body{
     width:100%;
     height:100%;
     object-fit:cover;
-    display:none;
+    opacity:0;
+    transition:opacity .5s;
+}
+#video.visible{
+    opacity:1;
 }
 
 #loading{
@@ -517,12 +521,13 @@ function getNow(){
 function showVideo(){
     loading.style.display="none";
     staticScreen.style.display="none";
-    video.style.display="block";
+    video.classList.add("visible");
 }
 
 function showStatic(){
     loading.style.display="none";
-    video.style.display="none";
+    video.classList.remove("visible");
+    video.style.opacity="0";
     staticScreen.style.display="block";
 }
 
@@ -538,10 +543,7 @@ function initHLS(){
         return;
     }
     hlsInstance=new Hls({
-        enableWorker:true,
-        liveSyncDurationCount:3,
-        maxBufferLength:30,
-        backBufferLength:60
+        enableWorker:true
     });
     hlsInstance.loadSource(STREAM);
     hlsInstance.attachMedia(video);
