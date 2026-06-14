@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Magic Kids Television v1.0.0</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20"></script>
 <style>
 *{margin:0;padding:0}
@@ -446,7 +449,7 @@ body.full-mode-body{
         <div id="vol-indicator"></div>
         <div id="view-counter">&#x1F441; <span id="view-count">0</span></div>
 
-        <video id="video" autoplay muted playsinline></video>
+        <video id="video" muted playsinline preload="auto"></video>
 
     </div>
 
@@ -521,6 +524,7 @@ function showVideo(){
     loading.style.display="none";
     staticScreen.style.display="none";
     video.classList.add("visible");
+    hlsRetries=0;
 }
 
 function showStatic(){
@@ -542,25 +546,26 @@ function initHLS(){
         return;
     }
     hlsInstance=new Hls({
-        enableWorker:true,
+        enableWorker:false,
         lowLatencyMode:false,
         startFragPrefetch:true,
-        maxBufferLength:60,
-        maxMaxBufferLength:120,
+        maxBufferLength:30,
         backBufferLength:0,
-        liveSyncDurationCount:5,
-        liveMaxLatencyDurationCount:10,
-        manifestLoadingTimeOut:30000,
-        levelLoadingTimeOut:30000,
-        fragLoadingTimeOut:30000
+        manifestLoadingTimeOut:10000,
+        levelLoadingTimeOut:10000,
+        fragLoadingTimeOut:10000,
+        fragLoadingMaxRetry:5,
+        manifestLoadingMaxRetry:5
     });
     hlsInstance.loadSource(STREAM);
     hlsInstance.attachMedia(video);
     hlsInstance.on(Hls.Events.MANIFEST_PARSED,function(){
         video.volume=0.4;
-        video.play();
+        setTimeout(function(){
+            video.play().catch(function(){});
+        },3000);
     });
-    video.addEventListener("playing",showVideo);
+    video.addEventListener("playing",showVideo,{once:true});
     hlsInstance.on(Hls.Events.ERROR,function(event,data){
         if(data.fatal&&hlsRetries<3){
             hlsRetries++;
@@ -576,6 +581,11 @@ function initHLS(){
 }
 
 initHLS();
+setTimeout(function(){
+    if(loading.style.display!="none"){
+        loading.innerHTML='SINTONIZANDO...<br><span style="font-size:14px;cursor:pointer" onclick="location.reload()">TOCÁ PARA REINTENTAR</span>';
+    }
+},20000);
 
 document.getElementById("play").onclick=()=>{
     video.muted=false;
