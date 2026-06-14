@@ -481,9 +481,8 @@ body.full-mode-body{
             <button id="prog">📋 PROG</button>
             <button id="full">⛶ FULL</button>
         </div>
-        <div class="row" style="position:relative">
+        <div class="row">
             <button id="cast-btn" style="flex:1">📺 CAST</button>
-            <google-cast-launcher id="cast-launcher" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1"></google-cast-launcher>
         </div>
     </div>
 
@@ -707,9 +706,9 @@ setInterval(()=>{
 // --- CAST (Google Chromecast) ---
 const castBtn=document.getElementById('cast-btn');
 let isCasting=false;
+let castReady=false;
 
-(function initCast(){
-    if(!window.__castLoaded){castBtn.style.display='none';return}
+if(window.__castLoaded){
     try{
         const ctx=cast.framework.CastContext.getInstance();
         ctx.setOptions({
@@ -721,6 +720,7 @@ let isCasting=false;
                 case cast.framework.SessionState.SESSION_STARTED:
                 case cast.framework.SessionState.SESSION_RESUMED:
                     isCasting=true;
+                    castReady=true;
                     castBtn.classList.add('casting');
                     video.pause();
                     loadCastMedia();
@@ -732,8 +732,18 @@ let isCasting=false;
                     break;
             }
         });
-    }catch(e){castBtn.style.display='none'}
-})();
+        castReady=true;
+    }catch(e){}
+}
+
+castBtn.onclick=function(){
+    if(!castReady){alert('Cast no disponible en este navegador');return}
+    if(isCasting){
+        cast.framework.CastContext.getInstance().endCurrentSession(true);
+    }else{
+        cast.framework.CastContext.getInstance().requestSession().catch(function(){});
+    }
+};
 
 function loadCastMedia(){
     const session=cast.framework.CastContext.getInstance().getCurrentSession();
