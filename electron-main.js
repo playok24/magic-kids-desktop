@@ -3,8 +3,6 @@ const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const https = require("https");
 
-app.commandLine.appendSwitch("enable-features", "CastMirroring");
-
 let win;
 
 function createWindow(){

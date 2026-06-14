@@ -188,19 +188,6 @@ body.full-mode-body{
     background:linear-gradient(180deg,#3a5a7a,#2a3a5a);
 }
 
-#remote #cast-btn{
-    background:linear-gradient(180deg,#6a4a2a,#4a2a1a);
-}
-#remote #cast-btn:hover{
-    background:linear-gradient(180deg,#7a5a3a,#5a3a2a);
-}
-#remote #cast-btn.casting{
-    background:linear-gradient(180deg,#2a7a2a,#1a5a1a);
-}
-#remote #cast-btn.casting:hover{
-    background:linear-gradient(180deg,#3a8a3a,#2a6a2a);
-}
-
 #container.full-mode #remote{
     display:none;
 }
@@ -477,9 +464,6 @@ body.full-mode-body{
             <button id="prog">📋 PROG</button>
             <button id="full">⛶ FULL</button>
         </div>
-        <div class="row">
-            <button id="cast-btn" style="flex:1">📺 CAST</button>
-        </div>
     </div>
 
     <div id="prog-backdrop"></div>
@@ -543,6 +527,7 @@ function showStatic(){
 }
 
 var hlsInstance=null;
+var hlsRetries=0;
 
 function initHLS(){
     if(!Hls.isSupported()){
@@ -552,7 +537,20 @@ function initHLS(){
         }
         return;
     }
-    hlsInstance=new Hls();
+    hlsInstance=new Hls({
+        startLevel:0,
+        capLevelToPlayerSize:true,
+        maxBufferLength:15,
+        maxMaxBufferLength:30,
+        backBufferLength:0,
+        liveSyncDuration:3,
+        liveMaxLatencyDuration:6,
+        enableWorker:true,
+        lowLatencyMode:true,
+        fragLoadingTimeOut:10000,
+        manifestLoadingTimeOut:10000,
+        levelLoadingTimeOut:10000
+    });
     hlsInstance.loadSource(STREAM);
     hlsInstance.attachMedia(video);
     hlsInstance.on(Hls.Events.MANIFEST_PARSED,function(){
@@ -561,21 +559,19 @@ function initHLS(){
     });
     video.addEventListener("playing",showVideo);
     hlsInstance.on(Hls.Events.ERROR,function(event,data){
-        if(data.fatal){showStatic();hlsInstance=null}
+        if(data.fatal&&hlsRetries<3){
+            hlsRetries++;
+            hlsInstance.destroy();
+            hlsInstance=null;
+            setTimeout(initHLS,2000);
+        }else if(data.fatal){
+            showStatic();
+            hlsInstance=null;
+        }
     });
 }
 
-function destroyHLS(){
-    if(hlsInstance){
-        hlsInstance.detachMedia();
-        hlsInstance.destroy();
-        hlsInstance=null;
-    }
-}
-
 initHLS();
-
-video.addEventListener("error",showStatic);
 
 document.getElementById("play").onclick=()=>{
     video.muted=false;
@@ -710,49 +706,7 @@ setInterval(()=>{
     }
 },30000);
 
-// --- CAST (Remote Playback API) ---
-const castBtn=document.getElementById('cast-btn');
-let isCasting=false;
-
-castBtn.onclick=async function(){
-    if(!video.remote||!video.remote.prompt){
-        alert('Cast no disponible en este navegador');
-        return;
-    }
-    if(isCasting){
-        try{video.remote.cancel()}catch(e){}
-        return;
-    }
-    try{
-        destroyHLS();
-        video.src=STREAM;
-        video.muted=false;
-        await video.remote.prompt();
-        isCasting=true;
-        castBtn.classList.add('casting');
-        loading.style.display="none";
-        staticScreen.style.display="none";
-        video.style.display="block";
-    }catch(e){
-        console.error('Cast error:',e);
-        video.removeAttribute('src');
-        video.load();
-        initHLS();
-    }
-};
-
-video.remote.addEventListener('connect',function(){
-    isCasting=true;
-    castBtn.classList.add('casting');
-});
-
-video.remote.addEventListener('disconnect',function(){
-    isCasting=false;
-    castBtn.classList.remove('casting');
-    video.removeAttribute('src');
-    video.load();
-    initHLS();
-});
+// (cast removido)
 
 // --- CONTROL REMOTO (BroadcastChannel) ---
 const ctrlChannel = new BroadcastChannel("tv-retro-control");

@@ -116,19 +116,6 @@ body{
     background:linear-gradient(180deg,#5a3a7a,#3a2a5a);
 }
 
-.remote .btn-cast{
-    background:linear-gradient(180deg,#6a4a2a,#4a2a1a);
-}
-.remote .btn-cast:hover{
-    background:linear-gradient(180deg,#7a5a3a,#5a3a2a);
-}
-.remote .btn-cast-stop{
-    background:linear-gradient(180deg,#6a2a2a,#4a1a1a);
-}
-.remote .btn-cast-stop:hover{
-    background:linear-gradient(180deg,#7a3a3a,#5a2a2a);
-}
-
 .status{
     text-align:center;
     color:#666;
@@ -163,10 +150,6 @@ body{
         <button class="btn-prog" id="prog">📋 PROG</button>
         <button class="btn-full" id="full">⛶ FULL</button>
     </div>
-    <div class="row two">
-        <button class="btn-cast" id="cast-btn">📺 CAST</button>
-        <button class="btn-cast-stop" id="cast-stop">⏹ STOP CAST</button>
-    </div>
 
     <div class="status" id="status">Buscando reproductor...</div>
 </div>
@@ -193,8 +176,6 @@ cmd("chup","ch","up");
 cmd("chdn","ch","down");
 cmd("prog","prog");
 cmd("full","full");
-cmd("cast-btn","cast");
-document.getElementById("cast-stop").onclick=()=>{ send("cast") };
 
 // Fix volume buttons to send relative adjustment
 document.getElementById("volup").onclick=()=>{
