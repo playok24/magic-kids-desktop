@@ -40,7 +40,8 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "license": false
+      "license": false,
+      "artifactName": "Magic-Kids-Desktop-Setup-${version}.${ext}"
     },
     "publish": {
       "provider": "github",

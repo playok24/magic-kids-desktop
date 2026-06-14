@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Magic Kids Television v1.0.0</title>
+<script>
+window.__onGCastApiAvailable=function(a){window.__castReady=a};
+</script>
+<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
 *{margin:0;padding:0}
@@ -186,6 +190,19 @@ body.full-mode-body{
 }
 #remote #prog:hover{
     background:linear-gradient(180deg,#3a5a7a,#2a3a5a);
+}
+
+#remote #cast-btn{
+    background:linear-gradient(180deg,#6a4a2a,#4a2a1a);
+}
+#remote #cast-btn:hover{
+    background:linear-gradient(180deg,#7a5a3a,#5a3a2a);
+}
+#remote #cast-btn.casting{
+    background:linear-gradient(180deg,#2a7a2a,#1a5a1a);
+}
+#remote #cast-btn.casting:hover{
+    background:linear-gradient(180deg,#3a8a3a,#2a6a2a);
 }
 
 #container.full-mode #remote{
@@ -464,6 +481,9 @@ body.full-mode-body{
             <button id="prog">📋 PROG</button>
             <button id="full">⛶ FULL</button>
         </div>
+        <div class="row">
+            <button id="cast-btn" style="flex:1">📺 CAST</button>
+        </div>
     </div>
 
     <div id="prog-backdrop"></div>
@@ -683,6 +703,77 @@ setInterval(()=>{
     }
 },30000);
 
+// --- CAST (Google Chromecast) ---
+const castBtn=document.getElementById('cast-btn');
+let isCasting=false;
+
+function initCast(){
+    try{
+        const ctx=cast.framework.CastContext.getInstance();
+        ctx.setOptions({
+            receiverApplicationId:'CC1AD845',
+            autoJoinPolicy:chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+        });
+        ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED,function(e){
+            switch(e.sessionState){
+                case cast.framework.SessionState.SESSION_STARTED:
+                case cast.framework.SessionState.SESSION_RESUMED:
+                    isCasting=true;
+                    castBtn.classList.add('casting');
+                    video.pause();
+                    loadCastMedia();
+                    break;
+                case cast.framework.SessionState.SESSION_ENDED:
+                    isCasting=false;
+                    castBtn.classList.remove('casting');
+                    video.play();
+                    break;
+            }
+        });
+    }catch(e){castBtn.style.display='none'}
+}
+
+function loadCastMedia(){
+    const session=cast.framework.CastContext.getInstance().getCurrentSession();
+    if(!session)return;
+    const info=new chrome.cast.media.MediaInfo(STREAM,'application/x-mpegURL');
+    info.metadata=new chrome.cast.media.GenericMediaMetadata();
+    const nowProg=getNow().programa;
+    info.metadata.title='Magic Kids'+(nowProg!=='---'?' - '+nowProg:' Television');
+    session.loadMedia(new chrome.cast.media.LoadRequest(info)).catch(function(){});
+}
+
+function toggleCast(){
+    if(isCasting){
+        cast.framework.CastContext.getInstance().endCurrentSession(true);
+    }else{
+        cast.framework.CastContext.getInstance().requestSession().catch(function(){});
+    }
+}
+
+if(window.__castReady)initCast();
+castBtn.onclick=toggleCast;
+
+document.getElementById("play").onclick=function(){
+    if(isCasting){
+        var rp=new cast.framework.RemotePlayer();
+        var rpc=new cast.framework.RemotePlayerController(rp);
+        if(rp.isPaused)rpc.playOrPause();
+        return;
+    }
+    video.muted=false;
+    video.play();
+};
+document.getElementById("pause").onclick=function(){
+    if(isCasting){
+        var rp=new cast.framework.RemotePlayer();
+        var rpc=new cast.framework.RemotePlayerController(rp);
+        if(!rp.isPaused)rpc.playOrPause();
+        return;
+    }
+    video.pause();
+};
+
 // --- CONTROL REMOTO (BroadcastChannel) ---
 const ctrlChannel = new BroadcastChannel("tv-retro-control");
 ctrlChannel.onmessage = (e)=>{
@@ -704,6 +795,7 @@ ctrlChannel.onmessage = (e)=>{
             else openProg();
             break;
         case "full": fullBtn.click(); break;
+        case "cast": castBtn.click(); break;
         case "ping": ctrlChannel.postMessage({cmd:"pong"}); break;
     }
 };
