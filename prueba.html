@@ -525,7 +525,6 @@ function showVideo(){
     loading.style.display="none";
     staticScreen.style.display="none";
     video.classList.add("visible");
-    hlsRetries=0;
 }
 
 function showStatic(){
@@ -547,24 +546,18 @@ function initHLS(){
         return;
     }
     hlsInstance=new Hls({
-        enableWorker:false,
-        lowLatencyMode:false,
-        startFragPrefetch:true,
+        enableWorker:true,
+        liveSyncDuration:3,
         maxBufferLength:30,
-        backBufferLength:0,
-        manifestLoadingTimeOut:10000,
-        levelLoadingTimeOut:10000,
-        fragLoadingTimeOut:10000,
-        fragLoadingMaxRetry:5,
-        manifestLoadingMaxRetry:5
+        backBufferLength:60
     });
     hlsInstance.loadSource(STREAM);
     hlsInstance.attachMedia(video);
     hlsInstance.on(Hls.Events.MANIFEST_PARSED,function(){
         video.volume=0.4;
-        video.play().catch(function(){});
+        video.play();
     });
-    video.addEventListener("playing",showVideo,{once:true});
+    video.addEventListener("playing",showVideo);
     hlsInstance.on(Hls.Events.ERROR,function(event,data){
         if(data.fatal&&hlsRetries<3){
             hlsRetries++;
@@ -580,11 +573,6 @@ function initHLS(){
 }
 
 initHLS();
-setTimeout(function(){
-    if(loading.style.display!="none"){
-        loading.innerHTML='SINTONIZANDO...<br><span style="font-size:14px;cursor:pointer" onclick="location.reload()">TOCÁ PARA REINTENTAR</span>';
-    }
-},20000);
 
 document.getElementById("play").onclick=()=>{
     video.muted=false;
