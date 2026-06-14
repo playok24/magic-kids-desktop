@@ -538,18 +538,10 @@ function initHLS(){
         return;
     }
     hlsInstance=new Hls({
-        startLevel:0,
-        capLevelToPlayerSize:true,
-        maxBufferLength:15,
-        maxMaxBufferLength:30,
-        backBufferLength:0,
-        liveSyncDuration:3,
-        liveMaxLatencyDuration:6,
         enableWorker:true,
-        lowLatencyMode:true,
-        fragLoadingTimeOut:10000,
-        manifestLoadingTimeOut:10000,
-        levelLoadingTimeOut:10000
+        liveSyncDurationCount:3,
+        maxBufferLength:30,
+        backBufferLength:60
     });
     hlsInstance.loadSource(STREAM);
     hlsInstance.attachMedia(video);
