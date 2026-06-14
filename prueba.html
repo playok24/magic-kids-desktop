@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Magic Kids Television v1.0.0</title>
 <script>
-window.__onGCastApiAvailable=function(a){window.__castReady=a};
+window.__onGCastApiAvailable=function(a){window.__castLoaded=a};
 </script>
 <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -466,31 +466,32 @@ body.full-mode-body{
 
     <div id="remote">
         <div class="row">
-            <button id="play">▶ PLAY</button>
-            <button id="pause">⏸ PAUSE</button>
+            <button id="play">? PLAY</button>
+            <button id="pause">? PAUSE</button>
         </div>
         <div class="row">
-            <button id="volup">🔊 +</button>
-            <button id="voldown">🔉 -</button>
+            <button id="volup">?? +</button>
+            <button id="voldown">?? -</button>
         </div>
         <div class="row">
-            <button id="chup">CH ▲</button>
-            <button id="chdn">CH ▼</button>
+            <button id="chup">CH ?</button>
+            <button id="chdn">CH ?</button>
         </div>
         <div class="row">
-            <button id="prog">📋 PROG</button>
-            <button id="full">⛶ FULL</button>
+            <button id="prog">?? PROG</button>
+            <button id="full">? FULL</button>
         </div>
-        <div class="row">
-            <button id="cast-btn" style="flex:1">📺 CAST</button>
+        <div class="row" style="position:relative">
+            <button id="cast-btn" style="flex:1">?? CAST</button>
+            <google-cast-launcher id="cast-launcher" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1"></google-cast-launcher>
         </div>
     </div>
 
     <div id="prog-backdrop"></div>
 
     <div id="prog-overlay">
-        <button class="close-btn" id="prog-close">✕</button>
-        <h2>📺 PROGRAMACIÓN</h2>
+        <button class="close-btn" id="prog-close">?</button>
+        <h2>?? PROGRAMACI�N</h2>
         <div class="now-bar">
             <div class="label">AHORA</div>
             <div class="show" id="now-show">---</div>
@@ -603,7 +604,7 @@ function enterFull(){
     isFullMode=true;
     container.classList.add("full-mode");
     document.body.classList.add("full-mode-body");
-    fullBtn.textContent="✕ SALIR";
+    fullBtn.textContent="? SALIR";
     fullBtn.classList.add("exit");
     if(window.electronAPI){
         window.electronAPI.fullscreenEnter();
@@ -616,7 +617,7 @@ function exitFull(){
     isFullMode=false;
     container.classList.remove("full-mode");
     document.body.classList.remove("full-mode-body");
-    fullBtn.textContent="⛶ FULL";
+    fullBtn.textContent="? FULL";
     fullBtn.classList.remove("exit");
     if(window.electronAPI){
         window.electronAPI.fullscreenExit();
@@ -707,11 +708,12 @@ setInterval(()=>{
 const castBtn=document.getElementById('cast-btn');
 let isCasting=false;
 
-function initCast(){
+(function initCast(){
+    if(!window.__castLoaded){castBtn.style.display='none';return}
     try{
         const ctx=cast.framework.CastContext.getInstance();
         ctx.setOptions({
-            receiverApplicationId:'CC1AD845',
+            receiverApplicationId:chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
             autoJoinPolicy:chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
         });
         ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED,function(e){
@@ -731,7 +733,7 @@ function initCast(){
             }
         });
     }catch(e){castBtn.style.display='none'}
-}
+})();
 
 function loadCastMedia(){
     const session=cast.framework.CastContext.getInstance().getCurrentSession();
@@ -740,19 +742,10 @@ function loadCastMedia(){
     info.metadata=new chrome.cast.media.GenericMediaMetadata();
     const nowProg=getNow().programa;
     info.metadata.title='Magic Kids'+(nowProg!=='---'?' - '+nowProg:' Television');
-    session.loadMedia(new chrome.cast.media.LoadRequest(info)).catch(function(){});
+    session.loadMedia(new chrome.cast.media.LoadRequest(info)).catch(function(e){
+        console.error('Cast loadMedia error:',e);
+    });
 }
-
-function toggleCast(){
-    if(isCasting){
-        cast.framework.CastContext.getInstance().endCurrentSession(true);
-    }else{
-        cast.framework.CastContext.getInstance().requestSession().catch(function(){});
-    }
-}
-
-if(window.__castReady)initCast();
-castBtn.onclick=toggleCast;
 
 document.getElementById("play").onclick=function(){
     if(isCasting){
