@@ -6,6 +6,7 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win --config",
+    "build:mac": "electron-builder --mac --config",
     "build:portable": "electron-builder --win portable --config"
   },
   "build": {
@@ -20,7 +21,11 @@
       "prueba.html",
       "control-remoto.html",
       "tv-retro.jpg",
-      "icon.ico"
+      "icon.ico",
+      "icon-192.png",
+      "icon-512.png",
+      "manifest.json",
+      "sw.js"
     ],
     "win": {
       "target": [
@@ -34,6 +39,10 @@
       "icon": "icon.ico",
       "sign": false,
       "signAndEditExecutable": false
+    },
+    "mac": {
+      "icon": "icon-mac.png",
+      "target": ["zip"]
     },
     "nsis": {
       "oneClick": false,

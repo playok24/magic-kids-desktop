@@ -1,0 +1,24 @@
+{
+    "name": "Magic Kids Television",
+    "short_name": "MagicKidsTV",
+    "description": "Canal de television infantil vintage",
+    "start_url": "https://playok24.github.io/magic-kids-tv/prueba.html",
+    "display": "standalone",
+    "orientation": "landscape",
+    "background_color": "#000000",
+    "theme_color": "#6b21a8",
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
